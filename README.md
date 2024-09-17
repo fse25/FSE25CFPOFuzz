@@ -14,12 +14,12 @@ We assume that the following commands are run in sudo mode.
 
 Firstly, pull the already prebuilt docker image from [docker hub](https://hub.docker.com/r/fse25/cfpofuzz). Please make sure its name is `fse25/cfpofuzz`.
 ```sh
-$ docker pull docker push fse25/cfpofuzz:v1
+$ docker pull fse25/cfpofuzz:v2
 ```
 
 If everything is ok, a `fse25/cfpofuzz` image should be found in the images listed by `docker images` command. Then, you can create a container of such image and start a Bash session using the following command. An interactive `bash` shell on the container is also executed at the moment.
 ```sh
-$ docker run -it fse25/cfpofuzz:v1 bash
+$ docker run -it fse25/cfpofuzz:v2 bash
 ```
 
 If all goes well, the container should be running successfully. Otherwise, you can seek help from [Docker Doc](https://docs.docker.com/) if needed. 
@@ -173,6 +173,7 @@ luna(){
 ```
 In this context, we defined three events related to program behavior, labeled as A, B, and C. The property is expressed as follows: if the number of occurrences of event A is less than the sum of occurrences of events B and C, a bug will be triggered. We also instrumented and compiled the program based on the description in MOP. It is important to note that, unlike the instrumentation and compilation command in the ```Motivition demo``` above, here we are instrumenting the entire Luna project. Therefore, the following command is required for instrumentation and compilation of the entire project.
 ```
+$ make clean
 $ wac -proj test_build.json -afl -np <-print>
 ```
 The parameter ```-print``` is optional and can be used to output the instrumented source code (as .i files). The file ```test_build.json``` is the configuration file for instrumenting and compiling the entire project, and its content is as follows:
@@ -219,7 +220,7 @@ $ /home/ubuntu/CFPOfuzz/AFLnet-cfpo/afl-fuzz -v 1 -r ./xxxaspect -i in -o out <Â
 
 The parameters within <...> vary depending on the software being tested. In particular, for protocol-based software, the number of parameters increases, making the fuzzing commands more complex. For example, the command to test ```TinyDTLS``` is as follows
 ```
-/home/ubuntu/CFPOfuzz/AFLnet-cfpo/afl-fuzz -v 1 -r ./TD2aspect -i in-dtls  -o out  -N  udp://127.0.0.1/20220 -P DTLS12 -D 10000 -q 3 -s 3 <-E> -K -W 30 ./dtls-server
+$ /home/ubuntu/CFPOfuzz/AFLnet-cfpo/afl-fuzz -v 1 -r ./TD2aspect -i in-dtls  -o out  -N  udp://127.0.0.1/20220 -P DTLS12 -D 10000 -q 3 -s 3 <-E> -K -W 30 ./dtls-server
 ```
 However, we have provided the individual fuzzing commands for our experimental targets in the GitHub repository. Other software follows a similar process, and you can use these as a reference to test other programs as well.
 
