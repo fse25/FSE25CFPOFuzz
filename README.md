@@ -27,14 +27,19 @@ If all goes well, the container should be running successfully. Otherwise, you c
 Now, navigate into the directory containing our experimental environment and list the contents. 
 ```sh
 $ cd /home/ubuntu/ && ls
-CFPOfuzz /  CFPOfuzz-Benchmark / Fuzzdata /  New-bug / LLVM / demo /
+CFPOfuzz /  CFPOfuzz-Benchmark / Fuzzdata /  Newbug / LLVM / demo /
+
 $ cd /home/ubuntu/CFPOfuzz && ls
+AFL-cfpo /  antlr  /  ccmop  /  rv-monitor /  wcompiler / AFLnet-cfpo / aspectc / examples / wac-pass
 
 $ cd /home/ubuntu/CFPOfuzz-benchmark && ls
+Exiv2 / Live555 / Mujs / OpenSSL / TinyDTLS / luna / run.py
 
 $ cd /home/ubuntu/Fuzzdata && ls
+data / data1 / gen_table.py / table.tex
 
-$ cd /home/ubuntu/New-bug && ls
+$ cd /home/ubuntu/Newbug && ls
+Live555 / Luna / Mujs / NewCrash / TinyDTLS
 
 ```
 The necessary items to reproduce our evaluation are listed, including benchmark programs and scripts. The rest of this README assumes you are working in `/home/ubuntu`.
@@ -44,10 +49,55 @@ In the example discussed in our paper, we utilized a simple C++ program to demon
 $ cd /home/ubuntu/demo
 $ ls
 in   / stack.mop   /  test.cpp
-
-
+```
+其中stack.mop的内容如下：
+```
+Stack() {
+	event push after() :
+              call(%push(...)){}
+    event pop after() :
+              call(% pop(...)){}
+   cfg :
+        S -> push S pop | S S |push S| epsilon
+    @fail
+    {
+        printf("Stack hava errs !");
+    }
+}
+```
+In this context, ```event``` refers to events related to program behavior. Here, two events are defined: ```push ```and``` pop```. The ```cfg``` describes a property based on a context-free grammar, where ```fail``` indicates that a bug will be triggered if the program behavior violates the property, and ```match``` indicates that a bug will be triggered if the program behavior satisfies the property. Since our Motivition example only uses a single stack structure, there is no need to distinguish between different stacks. However, if multiple distinct stacks appear in the program, we can use a parameterized MOP file, where different stack base addresses are used as parameters for identification and differentiation. An example is as follows:
+```
+Stackp(std::stack<int> key) {
+     event push after(std::stack<int> key): call(% stack<int>.push(...))&& target(key){}
+     event pop after(std::stack<int> key): call(% stack<int>.pop(...))&& target(key){}
+     cfg :
+        S -> push S pop | S S | push S | epsilon
+    @fail
+    {
+        printf("Stack hava errs at %p!",key);
+        __RESET;
+    }
+}
 ```
 
+
+Next, based on the MOP file, we perform the instrumentation and compilation of the program. Our instrumentation process is divided into three parts: ***event instrumentation***, ***related control condition instrumentation*** (associated with events), and AFL's original ***coverage instrumentation***. You can complete the entire instrumentation and compilation process by running the following command in the current directory (```/home/ubuntu/demo```):
+```
+$ wac -mop stack.mop -np -afl  -cxx test.cpp -o test <-print>
+```
+
+After the instrumentation and compilation are completed, a directory called ```stackaspect``` will be generated in the current directory. This directory contains relevant control flow dominator information, the generated runtime libraries, and other related data. Therefore, if you want to use our method for testing, you must include the path to this directory as a parameter. You can run the following command to perform the fuzzing test:
+```
+/home/ubuntu/CFPOfuzz/AFL-cfpo/afl-fuzz -c 1 -r ./stackaspect -i in -o out-cfpo ./test
+```
+The``` -c ```parameter is followed by different configuration modes, which is an integer between 1 and 7(***1: CFPO*+IP; 2: CFPO*+IP+COV; 3: CFPO*; 4: CFPO*+COV; 5: COV+IP; 6: CFPO+IP; 7: CFPO***)，The value 1 indicates the use of the target method proposed in this paper.
+
+For property matching, distance calculation, and other related information, we use*** shared memory***  for communication. Determining ***whether the defined receiving state*** has been reached is done solely through the information in shared memory. Therefore, in coverage-guided fuzzing, the information in the stackaspect directory is not needed. The fuzzing command is as follows:
+```
+/home/ubuntu/CFPOfuzz/AFL-cfpo/afl-fuzz  -i in -o out-afl ./test
+```
+
+The initial input is stored in``` /home/ubuntu/demo/in/input```, and its content is ```"hhhhhh"```.You will observe that our method will identify the ```target input``` that triggers the bug in approximately ```30 seconds```, and it will be saved in ```/home/ubuntu/demo/out-cfpo/RVC```. In contrast, coverage-guided fuzzing is unlikely to discover the target input within``` 10 minutes```.
 ## Reproducing experimental results
 In our experiments, there are a total of 20 tasks. Among them, 13 tasks (from the `CFPOfuzz-Benchmark`) were evaluated under eight configurations (CFPO*+IP, CFPO+IP, CFPO*, CFPO, COV, COV+IP, COV+CFPO*, COV+IP+CFPO*). Our target approach is CFPO*+IP. Since it requires running 104 tasks in parallel, we provide scripts to automate and execute all experiments. The remaining 7 tasks(from the `New-bug`) involve previously unknown zero-day bugs discovered in real-world programs, which you can reproduce individually using our method as described in this section.
 
@@ -145,4 +195,3 @@ Here, compared to standard fuzzing, two additional parameters, ```-c ```and ```-
 It is important to note that if you are testing protocol-based software, you must use AFLnet-cfpo located at ```/home/ubuntu/CFPOfuzz/AFLnet-cfpo/afl-fuzz```. The main difference from the parameters mentioned earlier is that ```-c``` is replaced with ```-v```. You can select the fuzzing mode using``` -v x```, where``` x``` is an integer between 1 and 7 (***1: CFPO*+IP; 2: CFPO*+IP+COV; 3: CFPO*; 4: CFPO*+COV; 5: COV+IP; 6: CFPO+IP; 7: CFPO***). The parameters are similar to those used in standard AFLnet. If you want to run fuzzing guided purely by coverage (COV), the command is the same as for AFL or AFLnet. It is worth noting that even for COV-guided fuzzing(AFL or AFLnet), we have modified them to incorporate our property matching. As long as the program behavior reaches the defined receiving state, it will be treated as a crash and stored accordingly.
 
 The reproduction process for the other New-bug cases is similar to the one described above. We have provided the fuzzing commands for all tasks in the GitHub repository. You can use our method to reproduce them one by one. Additionally, for the previously mentioned bugs with existing CVE identifiers, you can follow the same process and refer to the fuzzing commands we provided for individual testing.
-
