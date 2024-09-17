@@ -195,3 +195,31 @@ Here, compared to standard fuzzing, two additional parameters, ```-c ```and ```-
 It is important to note that if you are testing protocol-based software, you must use AFLnet-cfpo located at ```/home/ubuntu/CFPOfuzz/AFLnet-cfpo/afl-fuzz```. The main difference from the parameters mentioned earlier is that ```-c``` is replaced with ```-v```. You can select the fuzzing mode using``` -v x```, where``` x``` is an integer between 1 and 7 (***1: CFPO*+IP; 2: CFPO*+IP+COV; 3: CFPO*; 4: CFPO*+COV; 5: COV+IP; 6: CFPO+IP; 7: CFPO***). The parameters are similar to those used in standard AFLnet. If you want to run fuzzing guided purely by coverage (COV), the command is the same as for AFL or AFLnet. It is worth noting that even for COV-guided fuzzing(AFL or AFLnet), we have modified them to incorporate our property matching. As long as the program behavior reaches the defined receiving state, it will be treated as a crash and stored accordingly.
 
 The reproduction process for the other New-bug cases is similar to the one described above. We have provided the fuzzing commands for all tasks in the GitHub repository. You can use our method to reproduce them one by one. Additionally, for the previously mentioned bugs with existing CVE identifiers, you can follow the same process and refer to the fuzzing commands we provided for individual testing.
+
+##Test other real-world programs
+
+**1.**If you want to test other real-world programs, the process is quite simple. First, you need to abstract the events of the program, then define the properties of these events and describe them using a context-free grammar (CFG), organizing the information into a ```MOP``` file.You can also apply ***general properties***, such as ensuring that the number of stack push operations is greater than pop operations, or that the number of lock and unlock operations is balanced, to test any program that includes these events.
+
+**2.**Next, you need to know the compilation commands and other relevant information for the project you are testing, and use that information to populate the previously mentioned configuration file ```test_build.json```.
+
+**3.**Using our method for instrumentation and compilation, the entire process is encapsulated by the ```wac``` command.
+```
+$ wac -proj test_build.json -afl <-np> <-print>
+```
+
+The``` -np ```option refers to non-parameterized instrumentation, meaning it performs instrumentation without parameters based on the event definitions in the MOP file.
+
+**4.**After the instrumentation and compilation are completed, you can refer to the standard fuzzing commands and add our ```-c  -r``` (for regular programs) or``` -v -r``` (for protocol-based software) options to perform fuzzing tests using our method.
+```
+#Regular software
+$ /home/ubuntu/CFPOfuzz/AFL-cfpo/afl-fuzz -c 1 -r ./xxxaspect -i in -o out  <...> ./Executable file <@@>
+#Protocol-based software
+$ /home/ubuntu/CFPOfuzz/AFLnet-cfpo/afl-fuzz -v 1 -r ./xxxaspect -i in -o out <···>  /Executable file  <···>
+```
+
+The parameters within <...> vary depending on the software being tested. In particular, for protocol-based software, the number of parameters increases, making the fuzzing commands more complex. For example, the command to test ```TinyDTLS``` is as follows
+```
+/home/ubuntu/CFPOfuzz/AFLnet-cfpo/afl-fuzz -v 1 -r ./TD2aspect -i in-dtls  -o out  -N  udp://127.0.0.1/20220 -P DTLS12 -D 10000 -q 3 -s 3 <-E> -K -W 30 ./dtls-server
+```
+However, we have provided the individual fuzzing commands for our experimental targets in the GitHub repository. Other software follows a similar process, and you can use these as a reference to test other programs as well.
+
