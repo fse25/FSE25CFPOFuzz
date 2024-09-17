@@ -50,7 +50,7 @@ $ cd /home/ubuntu/demo
 $ ls
 in   / stack.mop   /  test.cpp
 ```
-其中stack.mop的内容如下：
+The content of ```stack.mop``` is as follows:
 ```
 Stack() {
 	event push after() :
@@ -88,13 +88,13 @@ $ wac -mop stack.mop -np -afl  -cxx test.cpp -o test <-print>
 
 After the instrumentation and compilation are completed, a directory called ```stackaspect``` will be generated in the current directory. This directory contains relevant control flow dominator information, the generated runtime libraries, and other related data. Therefore, if you want to use our method for testing, you must include the path to this directory as a parameter. You can run the following command to perform the fuzzing test:
 ```
-/home/ubuntu/CFPOfuzz/AFL-cfpo/afl-fuzz -c 1 -r ./stackaspect -i in -o out-cfpo ./test
+$ /home/ubuntu/CFPOfuzz/AFL-cfpo/afl-fuzz -c 1 -r ./stackaspect -i in -o out-cfpo ./test
 ```
 The``` -c ```parameter is followed by different configuration modes, which is an integer between 1 and 7(***1: CFPO*+IP; 2: CFPO*+IP+COV; 3: CFPO*; 4: CFPO*+COV; 5: COV+IP; 6: CFPO+IP; 7: CFPO***)，The value 1 indicates the use of the target method proposed in this paper.
 
 For property matching, distance calculation, and other related information, we use*** shared memory***  for communication. Determining ***whether the defined receiving state*** has been reached is done solely through the information in shared memory. Therefore, in coverage-guided fuzzing, the information in the stackaspect directory is not needed. The fuzzing command is as follows:
 ```
-/home/ubuntu/CFPOfuzz/AFL-cfpo/afl-fuzz  -i in -o out-afl ./test
+$ /home/ubuntu/CFPOfuzz/AFL-cfpo/afl-fuzz  -i in -o out-afl ./test
 ```
 
 The initial input is stored in``` /home/ubuntu/demo/in/input```, and its content is ```"hhhhhh"```.You will observe that our method will identify the ```target input``` that triggers the bug in approximately ```30 seconds```, and it will be saved in ```/home/ubuntu/demo/out-cfpo/RVC```. In contrast, coverage-guided fuzzing is unlikely to discover the target input within``` 10 minutes```.
@@ -142,8 +142,8 @@ In this context, num**x** represents the results of the **x-th** experiment. The
 After completing five rounds of experiments, you can collect, organize, and compute the experimental data using the following command. The final results will be presented in the **table.tex** file.
 
 ```
-$cd /home/ubuntu/Fuzz-data
-$python3 gen_table.py
+$ cd /home/ubuntu/Fuzz-data
+$ python3 gen_table.py
 ```
 
 ### Reproduce the experimental results of new bugs:
@@ -151,7 +151,7 @@ In the experiment, we discovered seven previously unknown zero-day bugs (LN1, LN
 
 Using ```LN3``` as an example, we first navigate to the source code directory of ```LN3```.
 ```
-$cd /home/ubuntu/Newbug/Luna/luna-cfg3
+$ cd /home/ubuntu/Newbug/Luna/luna-cfg3
 ```
 
 You will see our MOP file with the following content (``luna.mop``).
@@ -196,20 +196,20 @@ It is important to note that if you are testing protocol-based software, you mus
 
 The reproduction process for the other New-bug cases is similar to the one described above. We have provided the fuzzing commands for all tasks in the GitHub repository. You can use our method to reproduce them one by one. Additionally, for the previously mentioned bugs with existing CVE identifiers, you can follow the same process and refer to the fuzzing commands we provided for individual testing.
 
-##Test other real-world programs
+## Test other real-world programs
 
-**1.**If you want to test other real-world programs, the process is quite simple. First, you need to abstract the events of the program, then define the properties of these events and describe them using a context-free grammar (CFG), organizing the information into a ```MOP``` file.You can also apply ***general properties***, such as ensuring that the number of stack push operations is greater than pop operations, or that the number of lock and unlock operations is balanced, to test any program that includes these events.
+**1** If you want to test other real-world programs, the process is quite simple. First, you need to abstract the events of the program, then define the properties of these events and describe them using a context-free grammar (CFG), organizing the information into a ```MOP``` file.You can also apply ***general properties***, such as ensuring that the number of stack push operations is greater than pop operations, or that the number of lock and unlock operations is balanced, to test any program that includes these events.
 
-**2.**Next, you need to know the compilation commands and other relevant information for the project you are testing, and use that information to populate the previously mentioned configuration file ```test_build.json```.
+**2** Next, you need to know the compilation commands and other relevant information for the project you are testing, and use that information to populate the previously mentioned configuration file ```test_build.json```.
 
-**3.**Using our method for instrumentation and compilation, the entire process is encapsulated by the ```wac``` command.
+**3** Using our method for instrumentation and compilation, the entire process is encapsulated by the ```wac``` command.
 ```
 $ wac -proj test_build.json -afl <-np> <-print>
 ```
 
 The``` -np ```option refers to non-parameterized instrumentation, meaning it performs instrumentation without parameters based on the event definitions in the MOP file.
 
-**4.**After the instrumentation and compilation are completed, you can refer to the standard fuzzing commands and add our ```-c  -r``` (for regular programs) or``` -v -r``` (for protocol-based software) options to perform fuzzing tests using our method.
+**4** After the instrumentation and compilation are completed, you can refer to the standard fuzzing commands and add our ```-c  -r``` (for regular programs) or``` -v -r``` (for protocol-based software) options to perform fuzzing tests using our method.
 ```
 #Regular software
 $ /home/ubuntu/CFPOfuzz/AFL-cfpo/afl-fuzz -c 1 -r ./xxxaspect -i in -o out  <...> ./Executable file <@@>
